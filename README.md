@@ -1,6 +1,7 @@
+![BuildStatus](https://github.com/blonn25/HW5-NW/actions/workflows/test.yml/badge.svg?event=push)
+
 # Project 5
 Needleman Wunsch Algorithm
-
 
 # Assignment Overview
 The purpose of this assigment is to have you implement the Needleman-Wunsch global pairwise sequence alignment algorithm (dynamic programming).
