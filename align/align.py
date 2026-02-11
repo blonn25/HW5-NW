@@ -127,13 +127,65 @@ class NeedlemanWunsch:
         self._seqB = seqB
         
         # TODO: Initialize matrix private attributes for use in alignment
-        # create matrices for alignment scores, gaps, and backtracing
-        pass
 
-        
+        # create matrices for alignment scores, gaps, and backtracing
+        len_A = len(seqA)
+        len_B = len(seqB)
+        self._align_matrix = np.zeros((len_A + 1, len_B + 1), dtype=int)
+        self._gapA_matrix = np.zeros((len_A + 1, len_B + 1), dtype=int)
+        self._gapB_matrix = np.zeros((len_A + 1, len_B + 1), dtype=int)
+        self._back_A = np.zeros((len_A + 1, len_B + 1), dtype=int)
+        self._back_B = np.zeros((len_A + 1, len_B + 1), dtype=int)
+
         # TODO: Implement global alignment here
-        pass      		
-        		    
+        
+        # initialize the first row and col of the alignment matrix and backtracing matrices
+        self._align_matrix[0, 0] = 0
+        for i in range(1, len_A + 1):
+            self._align_matrix[i, 0] = self.gap_open + (i-1) * self.gap_extend
+        for j in range(1, len_B + 1):
+            self._align_matrix[0, j] = self.gap_open + (j-1) * self.gap_extend
+        for i in range(1, len_A + 1):
+            self._back_A[i, 0] = i - 1
+            self._back_B[i, 0] = 0
+        for j in range(1, len_B + 1):
+            self._back_A[0, j] = 0
+            self._back_B[0, j] = j - 1
+
+        # generate the alignment matrix
+        for i in range(1, len_A + 1):
+            for j in range(1, len_B + 1):
+                
+                # compute the score for extending the alignmnent diagonally
+                score_diag = self._align_matrix[i-1, j-1] + self.sub_dict[(seqA[i-1], seqB[j-1])]
+
+                # compute the score for adding a gap to the alignment in seqA (extends the alignment down)
+                score_down = max(
+                    self._align_matrix[i-1, j] + self.gap_open,     # open a new gap in seqA
+                    self._gapA_matrix[i-1, j] + self.gap_extend     # extend a gap in seqA (add extenstion penalty to previous gapA penalty)
+                )
+                self._gapA_matrix[i, j] = score_down    # update gapA matrix
+
+                # compute the score for adding a gap to the alignment in seqB (extends the alignment to the right)
+                score_right = max(
+                    self._align_matrix[i, j-1] + self.gap_open,     # open a new gap in seqB
+                    self._gapB_matrix[i, j-1] + self.gap_extend     # extend a gap in seqB (add extenstion penalty to previous gapB penalty)
+                )
+                self._gapB_matrix[i, j] = score_right   # update gapB matrix
+
+                # compute the max score of the three extension options
+                m_ij= max(score_diag, score_right, score_down)
+                self._align_matrix[i, j] = m_ij
+
+                # update the backtracing matrix to point to the cell from which the max score came from
+                back_pointer = [(i-1, j-1), (i, j-1), (i-1, j)][np.argmax([score_diag, score_right, score_down])]
+                self._back_A[i, j] = back_pointer[0]    # seqA is indexed by i (rows); stores i-component
+                self._back_B[i, j] = back_pointer[1]    # seqB is indexed by j (columns); stores j-component
+        
+        # combine the backtracing matrices into a single 3D backtracing matrix of shape [2, len_A+1, len_B+1]
+        self._back = np.stack([self._back_A, self._back_B], axis=0)
+        
+        # backtrace and return the alignment score, seqA alignment, and seqB alignment
         return self._backtrace()
 
     def _backtrace(self) -> Tuple[float, str, str]:
@@ -150,8 +202,45 @@ class NeedlemanWunsch:
          	(alignment score, seqA alignment, seqB alignment) : Tuple[float, str, str]
          		the score and corresponding strings for the alignment of seqA and seqB
         """
-        pass
+        # initialize the alignment score with the score in the bottom right of the alignment matrix
+        len_A = len(self._seqA)
+        len_B = len(self._seqB)
+        i, j = len_A, len_B
+        self.alignment_score = self._align_matrix[i, j]
 
+        # start from the bottom right of the alignment matrix and backtrace through it
+        while i > 0 or j > 0:
+
+            # get the indices of the cell pointed to by the current cell
+            i_new, j_new = self._back[:, i, j]
+
+            # this is an equivalent way to get the indices
+            # i_new = self._back_A[i, j]
+            # j_new = self._back_B[i, j]
+
+            # add the score of the current cell to the alignment score
+            self.alignment_score += self._align_matrix[i, j]
+
+            # update the aligned sequences given backtrace direction
+            # diagonal (both seqA and seqB extended)
+            if i_new == i-1 and j_new == j-1:
+                self.seqA_align = self._seqA[i-1] + self.seqA_align
+                self.seqB_align = self._seqB[j-1] + self.seqB_align
+            # up (seqA extended; gap added to seqB)
+            elif i_new == i-1 and j_new == j:
+                self.seqA_align = self._seqA[i-1] + self.seqA_align
+                self.seqB_align = "-" + self.seqB_align
+            # left (seqB extended; gap added to seqA)
+            elif i_new == i and j_new == j-1:
+                self.seqA_align = "-" + self.seqA_align
+                self.seqB_align = self._seqB[j-1] + self.seqB_align
+            else:
+                raise ValueError("Invalid backtrace direction") # should never happen (if things work correctly lol)
+
+            # update i and j
+            i, j = i_new, j_new
+
+        # return the alignment score and the aligned sequences
         return (self.alignment_score, self.seqA_align, self.seqB_align)
 
 
