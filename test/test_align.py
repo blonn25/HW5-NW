@@ -25,9 +25,24 @@ def test_nw_backtrace():
     Use the BLOSUM62 matrix. Use a gap open
     penalty of -10 and a gap extension penalty of -1.
     """
+
+    # get seqs
     seq3, _ = read_fasta("./data/test_seq3.fa")
     seq4, _ = read_fasta("./data/test_seq4.fa")
-    pass
+
+    # initialize the algorithm
+    sub_matrix_file = "./substitution_matrices/BLOSUM62.mat"
+    gap_open = -10
+    gap_extend = -1
+    nw_algo = NeedlemanWunsch(sub_matrix_file, gap_open, gap_extend)
+
+    # perform the alignment
+    alignment_score, seq3_align, seq4_align = nw_algo.align(seq3, seq4)
+
+    # assert that the score and aligned sequences are correct
+    assert alignment_score == 17
+    assert seq3_align == "MAVHQLIRRP"
+    assert seq4_align == "M---QLIRHP"
 
 
 
