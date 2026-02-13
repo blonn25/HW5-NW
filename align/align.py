@@ -139,6 +139,8 @@ class NeedlemanWunsch:
 
         # initialize 0, 0 in the alignment matrix, the first row and col of the gap matrices,
         # and the first row and col of the backtracing matrices
+        # NOTE: there is no need to initialize the first row/col of the gapA and gapB matrices because
+        # they are either already set to infinity, or will never be used (e.g. gapA will never look at the first column (i=0) because it only looks "up")
         self._align_matrix[0, 0] = 0.0
         for i in range(1, len_A + 1):
             self._align_matrix[i, 0] = self.gap_open + (i * self.gap_extend)
