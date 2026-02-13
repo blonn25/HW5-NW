@@ -137,22 +137,19 @@ class NeedlemanWunsch:
         self._back_A = np.zeros((len_A + 1, len_B + 1), dtype=int)
         self._back_B = np.zeros((len_A + 1, len_B + 1), dtype=int)
 
-        # TODO: Implement global alignment here
-        
-        # initialize 0, 0 in the alignment matrix,
-        # the first row and col of the gap matrices,
-        # and the first row and col in the backtracing matrices
+        # initialize 0, 0 in the alignment matrix, the first row and col of the gap matrices,
+        # and the first row and col of the backtracing matrices
         self._align_matrix[0, 0] = 0.0
         for i in range(1, len_A + 1):
-            self._gapA_matrix[i, 0] = self.gap_open + (i * self.gap_extend)
+            self._align_matrix[i, 0] = self.gap_open + (i * self.gap_extend)
+            self._back_A[i, 0] = i - 1
+            # self._gapA_matrix[i, 0] = self.gap_open + (i * self.gap_extend)
         for j in range(1, len_B + 1):
-            self._gapB_matrix[0, j] = self.gap_open + (j * self.gap_extend)
-        # for i in range(1, len_A + 1):
-        #     self._back_A[i, 0] = i - 1
-        #     # self._back_B[i, 0] = 0
-        # for j in range(1, len_B + 1):
-        #     # self._back_A[0, j] = 0
-        #     self._back_B[0, j] = j - 1
+            self._align_matrix[0, j] = self.gap_open + (j * self.gap_extend)
+            self._back_B[0, j] = j - 1
+            # self._gapB_matrix[0, j] = self.gap_open + (j * self.gap_extend)
+
+        # TODO: Implement global alignment here
 
         # generate the alignment matrix
         for i in range(1, len_A + 1):
@@ -176,11 +173,11 @@ class NeedlemanWunsch:
                 self._gapB_matrix[i, j] = score_right   # update gapB matrix
 
                 # compute the max score of the three extension options
-                m_ij= max(score_diag, score_right, score_down)
+                m_ij= max(score_right, score_down, score_diag)
                 self._align_matrix[i, j] = m_ij
 
                 # update the backtracing matrix to point to the cell from which the max score came from
-                back_pointer = [(i-1, j-1), (i, j-1), (i-1, j)][np.argmax([score_diag, score_right, score_down])]
+                back_pointer = [(i, j-1), (i-1, j), (i-1, j-1)][np.argmax([score_right, score_down, score_diag])]
                 self._back_A[i, j] = back_pointer[0]    # seqA is indexed by i (rows); stores i-component
                 self._back_B[i, j] = back_pointer[1]    # seqB is indexed by j (columns); stores j-component
         
